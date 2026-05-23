@@ -98,37 +98,47 @@
         </div>
     </div>
 
-    <!-- Modal 2: Chi tiết đang làm (Đồng hồ khổng lồ) -->
+    <!-- Modal 2: Chi tiết đang làm (Có thêm khung Ghi chú phụ việc) -->
     <div id="modal-active-detail" class="hidden fixed inset-0 bg-slate-900/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
-        <div class="w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl p-6 md:p-10 flex flex-col items-center relative overflow-hidden modal-enter">
+        <div class="w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl p-6 md:p-10 flex flex-col items-center relative overflow-hidden modal-enter max-h-[95vh] overflow-y-auto">
             <!-- Hiệu ứng nền -->
             <div class="absolute -top-32 -right-32 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl animate-pulse hidden md:block"></div>
             <div class="absolute -bottom-32 -left-32 w-64 h-64 bg-green-500/10 rounded-full blur-3xl animate-pulse hidden md:block"></div>
 
-            <div id="mad-avatar" class="w-20 h-20 md:w-24 md:h-24 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-3xl md:text-4xl mb-4 shadow-lg"></div>
-            <h2 id="mad-name" class="text-2xl md:text-3xl font-bold text-slate-800 mb-2"></h2>
+            <div id="mad-avatar" class="w-16 h-16 md:w-20 md:h-20 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-2xl md:text-3xl mb-3 shadow-lg shrink-0"></div>
+            <h2 id="mad-name" class="text-xl md:text-2xl font-bold text-slate-800 mb-1"></h2>
             
-            <div class="bg-slate-50 border-4 border-slate-100 rounded-[2rem] p-6 md:p-8 w-full text-center mb-8 shadow-inner mt-2">
-                <p id="mad-task" class="text-3xl md:text-4xl font-bold text-blue-700 mb-6 uppercase tracking-wide break-words"></p>
+            <div class="bg-slate-50 border-4 border-slate-100 rounded-[2rem] p-5 md:p-6 w-full text-center mb-6 shadow-inner mt-2 shrink-0">
+                <p id="mad-task" class="text-2xl md:text-3xl font-bold text-blue-700 mb-4 uppercase tracking-wide break-words"></p>
                 
                 <!-- ĐỒNG HỒ KHỔNG LỒ -->
-                <div class="bg-slate-900 p-6 md:p-8 rounded-3xl shadow-xl border-4 border-slate-800 relative">
-                    <div class="absolute top-4 left-6 flex items-center gap-2">
+                <div class="bg-slate-900 p-4 md:p-6 rounded-3xl shadow-xl border-4 border-slate-800 relative">
+                    <div class="absolute top-3 left-5 flex items-center gap-2">
                         <div class="w-3 h-3 bg-red-500 rounded-full animate-ping-slow"></div>
                         <span class="text-red-500 text-xs font-bold tracking-widest uppercase">Recording</span>
                     </div>
-                    <p id="mad-timer" class="text-5xl md:text-[5rem] leading-none font-mono font-bold text-green-400 tracking-tighter drop-shadow-[0_0_15px_rgba(74,222,128,0.5)] mt-6 md:mt-4">
+                    <p id="mad-timer" class="text-4xl md:text-[4rem] leading-none font-mono font-bold text-green-400 tracking-tighter drop-shadow-[0_0_15px_rgba(74,222,128,0.5)] mt-6 md:mt-4">
                         00:00:00
                     </p>
                 </div>
+                
+                <!-- GHI CHÚ VIỆC PHỤ LẮT NHẮT -->
+                <div class="mt-5 w-full text-left">
+                    <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <i class="ph-fill ph-note-pencil text-lg text-blue-500"></i> Ghi chú phát sinh / Có làm phụ việc khác?
+                    </label>
+                    <textarea id="mad-note" rows="2" placeholder="Ví dụ: Đang làm thì đi phụ anh Đệ bưng khuôn 15 phút..." 
+                        onchange="updateSessionNote()"
+                        class="w-full bg-white border-2 border-slate-200 rounded-xl p-3 text-slate-700 text-sm md:text-base focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all resize-none font-medium"></textarea>
+                </div>
             </div>
 
-            <div class="flex flex-col md:flex-row gap-4 w-full">
-                <button onclick="closeModals()" class="flex-1 bg-slate-100 text-slate-600 p-5 rounded-2xl font-bold text-lg md:text-xl active:scale-95 transition-transform">
+            <div class="flex flex-col md:flex-row gap-4 w-full shrink-0">
+                <button onclick="closeModals()" class="flex-1 bg-slate-100 text-slate-600 p-4 rounded-2xl font-bold text-lg active:scale-95 transition-transform">
                     Đóng (Vẫn chạy)
                 </button>
-                <button onclick="handleStopJob()" class="flex-[2] bg-red-500 hover:bg-red-600 text-white p-5 rounded-2xl font-bold text-lg md:text-xl flex items-center justify-center gap-3 shadow-xl shadow-red-500/30 active:scale-95 transition-transform">
-                    <i class="ph-fill ph-stop-circle text-3xl"></i> KẾT THÚC VIỆC
+                <button onclick="handleStopJob()" class="flex-[2] bg-red-500 hover:bg-red-600 text-white p-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 shadow-xl shadow-red-500/30 active:scale-95 transition-transform">
+                    <i class="ph-fill ph-stop-circle text-2xl"></i> KẾT THÚC VIỆC
                 </button>
             </div>
         </div>
@@ -221,7 +231,7 @@
                     <i class="ph-fill ph-chart-bar text-blue-500"></i> Phân tích Chi tiết Công việc từng người
                 </h2>
                 <!-- Chuyển grid thành 1 cột hoặc 2 cột để thẻ to hơn chứa danh sách việc -->
-                <div id="admin-summary-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch">
+                <div id="admin-summary-grid" class="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 items-stretch">
                     <!-- JS sẽ chèn thống kê vào đây -->
                 </div>
             </div>
@@ -237,7 +247,7 @@
                             <tr class="bg-slate-100 text-slate-600 text-sm">
                                 <th class="p-4 font-bold">Thời gian chốt</th>
                                 <th class="p-4 font-bold">Tên Thợ</th>
-                                <th class="p-4 font-bold">Việc đã hoàn thành</th>
+                                <th class="p-4 font-bold">Việc đã hoàn thành (Kèm Ghi chú)</th>
                                 <th class="p-4 font-bold">Thời gian xử lý</th>
                                 <th class="p-4 font-bold text-right">Đóng góp ca</th>
                             </tr>
@@ -335,7 +345,6 @@
             return `${h} giờ ${m} phút`;
         }
         
-        // Format ngắn gọn để hiện trong thẻ cá nhân (Vd: 1h 30m)
         function formatCompactTime(decimalHours) {
             const totalMinutes = Math.round(decimalHours * 60);
             const h = Math.floor(totalMinutes / 60);
@@ -407,12 +416,11 @@
         function renderAdminDashboard() {
             const filterDate = document.getElementById('admin-date-filter').value;
 
-            // 1. TÍNH TOÁN HIỆU SUẤT & GOM NHÓM (Bao gồm chi tiết task)
+            // 1. TÍNH TOÁN HIỆU SUẤT & GOM NHÓM
             const summary = {};
             let totalFactoryHours = 0;
             let activeWorkersCount = 0;
 
-            // Khởi tạo thêm mảng personalLogs cho từng người
             WORKERS.forEach(w => {
                 summary[w.id] = { name: w.name, totalHours: 0, taskCount: 0, role: w.role, color: w.color, personalLogs: [] };
             });
@@ -426,7 +434,7 @@
                 if(summary[log.workerId]) {
                     summary[log.workerId].totalHours += log.duration;
                     summary[log.workerId].taskCount += 1;
-                    summary[log.workerId].personalLogs.push(log); // Gắn chi tiết log vào hồ sơ cá nhân
+                    summary[log.workerId].personalLogs.push(log); 
                     totalFactoryHours += log.duration;
                 }
             });
@@ -457,7 +465,6 @@
                 const efficiency = Math.round((data.totalHours / STANDARD_HOURS_PER_DAY) * 100);
                 const hasWorked = data.totalHours > 0;
                 
-                // Xác định Badge hiệu suất
                 let badge = '';
                 let progressColor = 'bg-slate-200';
                 if (efficiency >= 100) {
@@ -475,7 +482,7 @@
 
                 const progressWidth = efficiency > 100 ? 100 : efficiency;
 
-                // XÂY DỰNG DANH SÁCH CHI TIẾT CÔNG VIỆC BÊN TRONG THẺ
+                // XÂY DỰNG DANH SÁCH CHI TIẾT CÔNG VIỆC BÊN TRONG THẺ (Có hiển thị ghi chú nếu có)
                 let taskBreakdownHTML = '';
                 if (data.personalLogs.length > 0) {
                     taskBreakdownHTML = `
@@ -484,19 +491,24 @@
                                 <span><i class="ph-fill ph-list-bullets mr-1"></i> Bóc tách công việc</span>
                                 <span class="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-[10px] border border-blue-100">${data.taskCount} việc</span>
                             </p>
-                            <div class="space-y-2 overflow-y-auto max-h-40 pr-1 custom-scrollbar">
+                            <div class="space-y-3 overflow-y-auto max-h-56 pr-1 custom-scrollbar">
                     `;
                     
                     data.personalLogs.forEach((plog, index) => {
+                        let noteHtml = plog.notes ? `<div class="text-[13px] text-slate-500 mt-1.5 pl-6 border-l-2 border-slate-200 ml-1 italic bg-slate-50 py-1 rounded-r-md">↳ Phụ thêm: ${plog.notes}</div>` : '';
+                        
                         taskBreakdownHTML += `
-                            <div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
-                                <span class="text-sm font-medium text-slate-700 truncate mr-2 flex items-center gap-2" title="${plog.taskName}">
-                                    <span class="text-xs text-slate-400 font-mono">${index + 1}.</span> 
-                                    ${plog.taskName}
-                                </span>
-                                <span class="text-sm font-mono text-blue-600 font-bold whitespace-nowrap bg-white px-2 py-0.5 rounded border border-slate-200 shadow-sm">
-                                    ${formatCompactTime(plog.duration)}
-                                </span>
+                            <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm flex flex-col">
+                                <div class="flex justify-between items-center w-full">
+                                    <span class="text-sm font-semibold text-slate-800 truncate mr-2 flex items-center gap-2" title="${plog.taskName}">
+                                        <span class="text-xs text-slate-400 font-mono w-4">${index + 1}.</span> 
+                                        ${plog.taskName}
+                                    </span>
+                                    <span class="text-sm font-mono text-blue-600 font-bold whitespace-nowrap bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
+                                        ${formatCompactTime(plog.duration)}
+                                    </span>
+                                </div>
+                                ${noteHtml}
                             </div>
                         `;
                     });
@@ -510,10 +522,8 @@
                     `;
                 }
 
-                // Gắn thành phần thẻ
                 summaryGrid.innerHTML += `
-                    <div class="bg-white p-5 rounded-2xl border ${hasWorked ? 'border-slate-300 shadow-md' : 'border-slate-200 opacity-60'} transition-all flex flex-col h-full">
-                        <!-- Top Info -->
+                    <div class="bg-white p-5 rounded-3xl border ${hasWorked ? 'border-slate-300 shadow-md' : 'border-slate-200 opacity-60'} transition-all flex flex-col h-full">
                         <div class="flex justify-between items-start mb-4">
                             <div class="flex items-center gap-3">
                                 <div class="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${data.color}">
@@ -527,28 +537,26 @@
                             <div>${badge}</div>
                         </div>
 
-                        <!-- Progress Bar & Total Hours -->
-                        <div class="mb-4">
-                            <div class="flex justify-between items-end mb-1">
-                                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Tổng thời gian</span>
+                        <div class="mb-5 bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                            <div class="flex justify-between items-end mb-2">
+                                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Tổng thời gian thi công</span>
                                 <span class="font-mono font-bold ${hasWorked ? 'text-blue-700' : 'text-slate-800'} text-lg">${timeStr}</span>
                             </div>
-                            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-1">
-                                <div class="${progressColor} h-2 rounded-full transition-all duration-500" style="width: ${progressWidth}%"></div>
+                            <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden mb-1">
+                                <div class="${progressColor} h-2.5 rounded-full transition-all duration-500" style="width: ${progressWidth}%"></div>
                             </div>
                             <p class="text-right text-[10px] text-slate-400 font-bold">Đạt ${efficiency}% chuẩn (7.5h)</p>
                         </div>
 
-                        <!-- Danh sách chi tiết việc làm trong ngày -->
                         ${taskBreakdownHTML}
                     </div>
                 `;
             });
 
-            // 3. VẼ BẢNG NHẬT KÝ THEO TRÌNH TỰ (Chronological Log)
+            // 3. VẼ BẢNG NHẬT KÝ THEO TRÌNH TỰ
             const tbody = document.getElementById('admin-table-body');
             tbody.innerHTML = '';
-            const sortedLogs = [...filteredLogs].reverse(); // Đảo ngược để việc mới nhất lên đầu
+            const sortedLogs = [...filteredLogs].reverse(); 
             
             if(sortedLogs.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">Không có dữ liệu làm việc trong ngày này.</td></tr>`;
@@ -560,18 +568,25 @@
                 const logEfficiency = Math.round((log.duration / STANDARD_HOURS_PER_DAY) * 100);
                 const logTime = new Date(log.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
                 
+                let noteHtml = log.notes ? `<div class="text-[13px] text-slate-500 bg-slate-100 px-2 py-1 rounded inline-block mt-1 font-medium border border-slate-200">↳ Việc phụ: ${log.notes}</div>` : '';
+
                 tbody.innerHTML += `
                     <tr class="hover:bg-slate-50 transition-colors">
-                        <td class="p-4 text-slate-500 font-mono text-sm">${logTime}</td>
-                        <td class="p-4 font-bold text-slate-800 flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs">
-                                ${getInitials(w.name)}
+                        <td class="p-4 text-slate-500 font-mono text-sm align-top pt-5">${logTime}</td>
+                        <td class="p-4 font-bold text-slate-800 align-top pt-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs shrink-0">
+                                    ${getInitials(w.name)}
+                                </div>
+                                ${w.name}
                             </div>
-                            ${w.name}
                         </td>
-                        <td class="p-4 text-blue-700 font-semibold uppercase text-sm">${log.taskName}</td>
-                        <td class="p-4 font-mono font-bold text-slate-600">${formatHoursMinutes(log.duration)}</td>
-                        <td class="p-4 text-right">
+                        <td class="p-4 align-top pt-4">
+                            <div class="text-blue-700 font-bold uppercase text-sm mb-1">${log.taskName}</div>
+                            ${noteHtml}
+                        </td>
+                        <td class="p-4 font-mono font-bold text-slate-600 align-top pt-4">${formatHoursMinutes(log.duration)}</td>
+                        <td class="p-4 text-right align-top pt-4">
                             <span class="inline-block bg-indigo-50 text-indigo-700 font-mono font-bold px-3 py-1 rounded-lg border border-indigo-100">
                                 ${logEfficiency}% ca
                             </span>
@@ -582,6 +597,13 @@
         }
 
         // --- XỬ LÝ SỰ KIỆN KIOSK ---
+        // Lưu ghi chú ngay khi người dùng gõ
+        function updateSessionNote() {
+            if(currentWorkerId && activeSessions[currentWorkerId]) {
+                activeSessions[currentWorkerId].notes = document.getElementById('mad-note').value.trim();
+            }
+        }
+
         function handleWorkerClick(workerId) {
             currentWorkerId = workerId;
             const worker = WORKERS.find(w => w.id === workerId);
@@ -591,6 +613,7 @@
                 document.getElementById('mad-avatar').innerText = getInitials(worker.name);
                 document.getElementById('mad-name').innerText = worker.name;
                 document.getElementById('mad-task').innerText = session.taskName;
+                document.getElementById('mad-note').value = session.notes || ''; // Hiển thị lại ghi chú cũ nếu có
                 openModal('modal-active-detail');
             } else {
                 document.getElementById('mit-avatar').className = `w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl ${worker.color}`;
@@ -618,6 +641,7 @@
 
             activeSessions[currentWorkerId] = {
                 taskName: taskName,
+                notes: '', // Khởi tạo ghi chú trống
                 startTime: Date.now()
             };
 
@@ -629,12 +653,17 @@
             const session = activeSessions[currentWorkerId];
             if(!session) return;
 
+            // Đảm bảo lấy được ghi chú mới nhất trước khi tắt
+            const latestNote = document.getElementById('mad-note').value.trim();
+            const finalNote = latestNote || session.notes || '';
+
             const durationHours = (Date.now() - session.startTime) / 3600000;
             
             logs.push({
                 id: Date.now(),
                 workerId: currentWorkerId,
                 taskName: session.taskName,
+                notes: finalNote, // Đưa ghi chú vào lịch sử
                 duration: durationHours,
                 timestamp: Date.now()
             });
