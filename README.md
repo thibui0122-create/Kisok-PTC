@@ -1,1 +1,693 @@
-# Kisok-PTC
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiosk Xưởng - Phương Thanh Composite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .animate-ping-slow { animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+        .modal-enter { animation: slideUp 0.3s ease-out forwards; }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        /* Custom scrollbar cho bảng admin và danh sách công việc */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen flex flex-col relative overflow-x-hidden">
+
+    <!-- ========================================== -->
+    <!-- 1. GIAO DIỆN KIOSK CHÍNH -->
+    <!-- ========================================== -->
+    <div id="view-kiosk" class="flex-1 flex flex-col p-6 md:p-10">
+        <!-- Nút Cài đặt (Vào Admin) -->
+        <button onclick="switchView('view-admin-login')" class="absolute top-6 right-6 p-4 text-slate-400 hover:text-slate-700 bg-white/80 rounded-full shadow-sm z-10 transition-colors">
+            <i class="ph-fill ph-gear text-3xl"></i>
+        </button>
+
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-end mb-10 mt-4 gap-6">
+            <div>
+                <!-- Brand & Logo -->
+                <div class="flex items-center gap-4">
+                    <div class="bg-white p-2 rounded-2xl shadow-sm border border-slate-200 shrink-0">
+                        <img src="VARUNA MARINE EQUIPMENT (196 x 196 px) (2048 x 2048 px) (7).jpg" alt="Logo PTC" class="h-16 w-16 md:h-20 md:w-20 object-contain">
+                    </div>
+                    <div>
+                        <h1 class="text-2xl md:text-3xl lg:text-4xl font-bold text-blue-800 tracking-tight uppercase">Phương Thanh Composite</h1>
+                        <p class="text-slate-500 mt-1 text-md md:text-lg font-medium">CÔNG TY TNHH MTV PHƯƠNG THANH COMPOSITE - PTC</p>
+                    </div>
+                </div>
+                
+                <!-- Hiển thị Ca làm việc để nhắc nhở thợ -->
+                <div class="mt-6 flex flex-wrap gap-3 text-sm font-bold tracking-wide">
+                    <span class="bg-blue-100 text-blue-700 px-4 py-2 rounded-full shadow-sm border border-blue-200">CA SÁNG: 07:30 - 11:30</span>
+                    <span class="bg-orange-100 text-orange-700 px-4 py-2 rounded-full shadow-sm border border-orange-200">CA CHIỀU: 13:30 - 17:00</span>
+                </div>
+            </div>
+            
+            <!-- Đồng hồ -->
+            <div class="text-left lg:text-right w-full lg:w-auto bg-white lg:bg-transparent p-4 lg:p-0 rounded-2xl shadow-sm lg:shadow-none border border-slate-200 lg:border-none pr-16 md:pr-0">
+                <p id="main-clock" class="text-4xl md:text-5xl font-mono font-bold text-blue-600 mb-1 tracking-wider">00:00</p>
+                <p id="main-date" class="text-slate-500 font-medium text-lg">Đang tải...</p>
+            </div>
+        </div>
+
+        <!-- Lưới danh sách thợ -->
+        <div id="worker-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- CÁC POPUP (MODAL) CỦA KIOSK -->
+    <!-- ========================================== -->
+    
+    <!-- Modal 1: Tự gõ công việc -->
+    <div id="modal-input-task" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="w-full max-w-2xl bg-white rounded-[2rem] shadow-2xl overflow-hidden modal-enter">
+            <div class="bg-slate-50 p-6 flex justify-between items-center border-b border-slate-100">
+                <button onclick="closeModals()" class="flex items-center text-slate-500 bg-white px-5 py-3 rounded-xl font-bold border border-slate-200 active:scale-95 shadow-sm">
+                    <i class="ph ph-arrow-left mr-2 text-xl"></i> Hủy bỏ
+                </button>
+                <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                    <div id="mit-avatar" class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg"></div>
+                    <span id="mit-name" class="font-bold text-xl text-slate-800"></span>
+                </div>
+            </div>
+            <div class="p-8">
+                <h2 class="text-2xl font-bold text-slate-700 mb-4 flex items-center gap-2">
+                    <i class="ph-fill ph-keyboard text-blue-500 text-3xl"></i> Bạn chuẩn bị làm việc gì?
+                </h2>
+                <form onsubmit="handleStartJob(event)">
+                    <input type="text" id="task-input" required placeholder="Vd: Chà nhám, đắp nhựa, ráp điện..." 
+                        class="w-full text-2xl md:text-3xl p-6 mb-2 border-2 border-slate-300 rounded-[1.5rem] focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 placeholder-slate-300 text-slate-800 font-bold">
+                    <p id="task-error" class="text-red-500 mb-6 font-medium hidden">Vui lòng nhập công việc!</p>
+                    
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-[1.5rem] font-bold text-xl md:text-2xl flex items-center justify-center gap-3 shadow-xl shadow-blue-500/30 transition-all active:scale-95">
+                        <i class="ph-fill ph-play-circle text-4xl"></i> BẮT ĐẦU TÍNH GIỜ
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Chi tiết đang làm (Đồng hồ khổng lồ) -->
+    <div id="modal-active-detail" class="hidden fixed inset-0 bg-slate-900/95 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl p-6 md:p-10 flex flex-col items-center relative overflow-hidden modal-enter">
+            <!-- Hiệu ứng nền -->
+            <div class="absolute -top-32 -right-32 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl animate-pulse hidden md:block"></div>
+            <div class="absolute -bottom-32 -left-32 w-64 h-64 bg-green-500/10 rounded-full blur-3xl animate-pulse hidden md:block"></div>
+
+            <div id="mad-avatar" class="w-20 h-20 md:w-24 md:h-24 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-3xl md:text-4xl mb-4 shadow-lg"></div>
+            <h2 id="mad-name" class="text-2xl md:text-3xl font-bold text-slate-800 mb-2"></h2>
+            
+            <div class="bg-slate-50 border-4 border-slate-100 rounded-[2rem] p-6 md:p-8 w-full text-center mb-8 shadow-inner mt-2">
+                <p id="mad-task" class="text-3xl md:text-4xl font-bold text-blue-700 mb-6 uppercase tracking-wide break-words"></p>
+                
+                <!-- ĐỒNG HỒ KHỔNG LỒ -->
+                <div class="bg-slate-900 p-6 md:p-8 rounded-3xl shadow-xl border-4 border-slate-800 relative">
+                    <div class="absolute top-4 left-6 flex items-center gap-2">
+                        <div class="w-3 h-3 bg-red-500 rounded-full animate-ping-slow"></div>
+                        <span class="text-red-500 text-xs font-bold tracking-widest uppercase">Recording</span>
+                    </div>
+                    <p id="mad-timer" class="text-5xl md:text-[5rem] leading-none font-mono font-bold text-green-400 tracking-tighter drop-shadow-[0_0_15px_rgba(74,222,128,0.5)] mt-6 md:mt-4">
+                        00:00:00
+                    </p>
+                </div>
+            </div>
+
+            <div class="flex flex-col md:flex-row gap-4 w-full">
+                <button onclick="closeModals()" class="flex-1 bg-slate-100 text-slate-600 p-5 rounded-2xl font-bold text-lg md:text-xl active:scale-95 transition-transform">
+                    Đóng (Vẫn chạy)
+                </button>
+                <button onclick="handleStopJob()" class="flex-[2] bg-red-500 hover:bg-red-600 text-white p-5 rounded-2xl font-bold text-lg md:text-xl flex items-center justify-center gap-3 shadow-xl shadow-red-500/30 active:scale-95 transition-transform">
+                    <i class="ph-fill ph-stop-circle text-3xl"></i> KẾT THÚC VIỆC
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 2. GIAO DIỆN ADMIN LOGIN -->
+    <!-- ========================================== -->
+    <div id="view-admin-login" class="hidden flex-1 flex items-center justify-center p-4 bg-slate-900">
+        <div class="bg-slate-800 p-8 md:p-10 rounded-[2rem] max-w-sm w-full border border-slate-700 shadow-2xl text-center">
+            <img src="VARUNA MARINE EQUIPMENT (196 x 196 px) (2048 x 2048 px) (7).jpg" alt="Logo PTC" class="h-20 w-20 mx-auto mb-6 object-contain bg-white rounded-2xl p-2 shadow-lg">
+            <h2 class="text-2xl font-bold text-white mb-6">Mã Quản Trị PTC</h2>
+            <input type="password" id="admin-pin" placeholder="Nhập mã PIN..." 
+                class="w-full bg-slate-900 border border-slate-600 text-white rounded-xl px-4 py-4 text-center text-2xl mb-2 focus:outline-none focus:border-blue-500">
+            <p id="pin-error" class="text-red-400 text-sm mb-4 h-5"></p>
+            <div class="flex gap-3">
+                <button onclick="switchView('view-kiosk')" class="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-4 rounded-xl font-bold transition-colors">Hủy</button>
+                <button onclick="checkLogin()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-bold transition-colors">Vào</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 3. GIAO DIỆN ADMIN DASHBOARD PHÂN TÍCH -->
+    <!-- ========================================== -->
+    <div id="view-admin-dashboard" class="hidden flex-1 flex flex-col md:flex-row bg-slate-50 min-h-screen">
+        <!-- Sidebar -->
+        <div class="w-full md:w-64 bg-slate-900 text-slate-300 flex flex-col shrink-0">
+            <div class="p-6 border-b border-slate-800">
+                <div class="flex flex-col gap-3">
+                    <img src="VARUNA MARINE EQUIPMENT (196 x 196 px) (2048 x 2048 px) (7).jpg" alt="Logo PTC" class="h-12 w-12 object-contain bg-white rounded-lg p-1">
+                    <h2 class="text-white font-bold text-xl">Dữ Liệu Xưởng PTC</h2>
+                </div>
+            </div>
+            <div class="p-4 md:mt-auto">
+                <button onclick="switchView('view-kiosk')" class="w-full flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-4 py-4 rounded-xl font-bold transition-colors">
+                    <i class="ph ph-arrow-left text-xl"></i> Về Kiosk
+                </button>
+            </div>
+        </div>
+        
+        <!-- Nội dung Dashboard Phân Tích -->
+        <div class="flex-1 p-6 md:p-10 overflow-y-auto">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-800 mb-2">Dashboard Phân Tích Hiệu Suất</h1>
+                    <!-- Bộ lọc ngày báo cáo -->
+                    <div class="flex items-center gap-3">
+                        <label class="text-slate-500 font-medium">Báo cáo ngày:</label>
+                        <input type="date" id="admin-date-filter" onchange="renderAdminDashboard()" 
+                            class="border-2 border-slate-200 rounded-xl px-4 py-2 text-slate-700 focus:outline-none focus:border-blue-500 font-bold bg-white shadow-sm">
+                    </div>
+                </div>
+                <div class="bg-blue-50 px-4 py-3 rounded-xl border border-blue-100 shadow-sm flex gap-6">
+                     <div>
+                         <p class="text-xs text-blue-600 font-bold uppercase">Ca Tiêu Chuẩn</p>
+                         <p class="font-mono font-bold text-blue-800 text-lg">7.5 Giờ</p>
+                     </div>
+                </div>
+            </div>
+
+            <!-- Tổng quan xưởng (Summary Banner) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-2xl"><i class="ph-fill ph-users"></i></div>
+                    <div>
+                        <p class="text-slate-500 font-medium text-sm">Nhân sự đi làm</p>
+                        <p id="stat-active-workers" class="text-2xl font-bold text-slate-800">0/9</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+                    <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-2xl"><i class="ph-fill ph-clock"></i></div>
+                    <div>
+                        <p class="text-slate-500 font-medium text-sm">Tổng giờ thi công</p>
+                        <p id="stat-total-hours" class="text-2xl font-bold text-slate-800">0h 0m</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex items-center gap-4">
+                    <div class="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-2xl"><i class="ph-fill ph-trend-up"></i></div>
+                    <div>
+                        <p class="text-slate-500 font-medium text-sm">Hiệu suất trung bình</p>
+                        <p id="stat-avg-efficiency" class="text-2xl font-bold text-slate-800">0%</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DASHBOARD TỔNG HỢP NĂNG LỰC CÁ NHÂN -->
+            <div class="mb-10">
+                <h2 class="text-xl font-bold text-slate-700 mb-4 flex items-center gap-2">
+                    <i class="ph-fill ph-chart-bar text-blue-500"></i> Phân tích Chi tiết Công việc từng người
+                </h2>
+                <!-- Chuyển grid thành 1 cột hoặc 2 cột để thẻ to hơn chứa danh sách việc -->
+                <div id="admin-summary-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 items-stretch">
+                    <!-- JS sẽ chèn thống kê vào đây -->
+                </div>
+            </div>
+
+            <!-- NHẬT KÝ XƯỞNG CHUNG (Chronological Log) -->
+            <div>
+                <h2 class="text-xl font-bold text-slate-700 mb-4 flex items-center gap-2">
+                    <i class="ph-fill ph-clock-counter-clockwise text-blue-500"></i> Nhật ký Xưởng (Theo trình tự hoàn thành)
+                </h2>
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
+                    <table class="w-full text-left min-w-[700px]">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 text-sm">
+                                <th class="p-4 font-bold">Thời gian chốt</th>
+                                <th class="p-4 font-bold">Tên Thợ</th>
+                                <th class="p-4 font-bold">Việc đã hoàn thành</th>
+                                <th class="p-4 font-bold">Thời gian xử lý</th>
+                                <th class="p-4 font-bold text-right">Đóng góp ca</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-table-body" class="divide-y divide-slate-100">
+                            <!-- JS sẽ chèn dữ liệu vào đây -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- DỮ LIỆU GỐC ---
+        const WORKERS = [
+            { id: 'W1', name: 'Lê Văn Tèo', role: 'Trưởng Kỹ Thuật Vỏ', color: 'bg-blue-100 text-blue-700' },
+            { id: 'W2', name: 'Trần Minh Đệ', role: 'Kỹ Thuật Vỏ', color: 'bg-emerald-100 text-emerald-700' },
+            { id: 'W3', name: 'Mai Thị Ngân', role: 'Kỹ Thuật Vỏ', color: 'bg-purple-100 text-purple-700' },
+            { id: 'W4', name: 'Danh Thị Thu Hà', role: 'Kỹ Thuật Vỏ', color: 'bg-pink-100 text-pink-700' },
+            { id: 'W5', name: 'Châu Hùng Cường', role: 'Kỹ Thuật Vỏ', color: 'bg-amber-100 text-amber-700' },
+            { id: 'W6', name: 'Nguyễn Thanh Sang', role: 'Kỹ Thuật Vỏ', color: 'bg-cyan-100 text-cyan-700' },
+            { id: 'W7', name: 'Mr. Hoàng', role: 'Kỹ Thuật Điện', color: 'bg-red-100 text-red-700' },
+            { id: 'W8', name: 'Phước Đoàn', role: 'Kỹ Thuật Vỏ', color: 'bg-indigo-100 text-indigo-700' },
+            { id: 'W9', name: 'Nhân', role: 'Kỹ Thuật Vỏ', color: 'bg-teal-100 text-teal-700' }
+        ];
+
+        const STANDARD_HOURS_PER_DAY = 7.5; 
+        const ADMIN_PIN = '02052003';
+
+        // --- TRẠNG THÁI (STATE) ---
+        let activeSessions = {};
+        let logs = [];
+        let currentWorkerId = null;
+
+        // --- HÀM TIỆN ÍCH ---
+        function getInitials(fullName) {
+            const parts = fullName.trim().split(' ');
+            return parts[parts.length - 1].charAt(0).toUpperCase();
+        }
+
+        window.onload = function() {
+            const today = new Date().toLocaleDateString('en-CA');
+            const dateFilter = document.getElementById('admin-date-filter');
+            if(dateFilter) dateFilter.value = today;
+
+            renderWorkerGrid();
+            startGlobalClock();
+        };
+
+        // --- ĐỒNG HỒ & THỜI GIAN THỰC ---
+        function startGlobalClock() {
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('main-clock').innerText = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                document.getElementById('main-date').innerText = now.toLocaleDateString('vi-VN');
+
+                const nowMs = Date.now();
+                document.querySelectorAll('.mini-timer').forEach(el => {
+                    const st = parseInt(el.getAttribute('data-start'));
+                    el.innerText = formatLiveTimer(st, nowMs);
+                });
+
+                const giantTimer = document.getElementById('mad-timer');
+                if (giantTimer && currentWorkerId && activeSessions[currentWorkerId]) {
+                    giantTimer.innerText = formatStopwatch(activeSessions[currentWorkerId].startTime, nowMs);
+                }
+            }, 1000);
+        }
+
+        function formatLiveTimer(startTime, now) {
+            const totalSecs = Math.max(0, Math.floor((now - startTime) / 1000));
+            const h = Math.floor(totalSecs / 3600);
+            const m = Math.floor((totalSecs % 3600) / 60);
+            const s = totalSecs % 60;
+            if (h > 0) return `${h}h ${m.toString().padStart(2, '0')}m ${s.toString().padStart(2, '0')}s`;
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function formatStopwatch(startTime, now) {
+            const totalSecs = Math.max(0, Math.floor((now - startTime) / 1000));
+            const h = Math.floor(totalSecs / 3600);
+            const m = Math.floor((totalSecs % 3600) / 60);
+            const s = totalSecs % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function formatHoursMinutes(decimalHours) {
+            const totalMinutes = Math.round(decimalHours * 60);
+            const h = Math.floor(totalMinutes / 60);
+            const m = totalMinutes % 60;
+            if (h === 0 && m === 0) return `0 phút`;
+            if (h === 0) return `${m} phút`;
+            if (m === 0) return `${h} giờ`;
+            return `${h} giờ ${m} phút`;
+        }
+        
+        // Format ngắn gọn để hiện trong thẻ cá nhân (Vd: 1h 30m)
+        function formatCompactTime(decimalHours) {
+            const totalMinutes = Math.round(decimalHours * 60);
+            const h = Math.floor(totalMinutes / 60);
+            const m = totalMinutes % 60;
+            if (h === 0) return `${m}p`;
+            if (m === 0) return `${h}h`;
+            return `${h}h ${m}p`;
+        }
+
+        // --- VẼ GIAO DIỆN (RENDER) ---
+        function renderWorkerGrid() {
+            const grid = document.getElementById('worker-grid');
+            grid.innerHTML = '';
+
+            WORKERS.forEach(w => {
+                const session = activeSessions[w.id];
+                const isWorking = !!session;
+                
+                const btnClass = isWorking 
+                    ? 'bg-blue-600 border-blue-500 shadow-xl shadow-blue-500/40' 
+                    : 'bg-white border-transparent hover:border-blue-200 shadow-md hover:shadow-lg';
+                
+                const avatarClass = isWorking ? 'bg-white text-blue-600' : w.color;
+                const nameClass = isWorking ? 'text-white' : 'text-slate-800';
+                const roleClass = isWorking ? 'text-blue-200' : 'text-slate-400';
+                
+                let contentHTML = '';
+                if (isWorking) {
+                    contentHTML = `
+                        <div class="w-full flex flex-col items-center mt-3">
+                            <div class="text-white font-bold text-lg text-center uppercase tracking-wider px-2 line-clamp-2">
+                                ${session.taskName}
+                            </div>
+                            <div class="mt-4 flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl border border-white/20">
+                                <i class="ph-fill ph-timer text-green-300 animate-pulse text-xl"></i>
+                                <span class="mini-timer text-white font-mono text-xl font-bold tracking-widest drop-shadow-md" data-start="${session.startTime}">
+                                    00:00
+                                </span>
+                            </div>
+                            <div class="absolute top-6 right-6 w-3 h-3 bg-green-400 rounded-full animate-ping"></div>
+                            <div class="absolute top-6 right-6 w-3 h-3 bg-green-400 rounded-full"></div>
+                        </div>
+                    `;
+                } else {
+                    contentHTML = `
+                        <div class="mt-4 flex flex-col items-center">
+                            <span class="bg-slate-100 text-slate-500 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider">
+                                Đang rảnh
+                            </span>
+                        </div>
+                    `;
+                }
+
+                const cardHTML = `
+                    <button onclick="handleWorkerClick('${w.id}')" 
+                        class="relative overflow-hidden flex flex-col items-center p-6 md:p-8 rounded-[2rem] transition-all duration-300 active:scale-95 border-2 group ${btnClass}">
+                        <div class="w-20 h-20 rounded-full flex items-center justify-center font-bold text-3xl mb-4 shadow-sm transition-transform group-hover:scale-105 ${avatarClass}">
+                            ${getInitials(w.name)}
+                        </div>
+                        <span class="font-bold text-xl md:text-2xl mb-1 ${nameClass} text-center">${w.name}</span>
+                        <span class="text-sm font-medium ${roleClass} text-center">${w.role}</span>
+                        ${contentHTML}
+                    </button>
+                `;
+                grid.innerHTML += cardHTML;
+            });
+        }
+
+        function renderAdminDashboard() {
+            const filterDate = document.getElementById('admin-date-filter').value;
+
+            // 1. TÍNH TOÁN HIỆU SUẤT & GOM NHÓM (Bao gồm chi tiết task)
+            const summary = {};
+            let totalFactoryHours = 0;
+            let activeWorkersCount = 0;
+
+            // Khởi tạo thêm mảng personalLogs cho từng người
+            WORKERS.forEach(w => {
+                summary[w.id] = { name: w.name, totalHours: 0, taskCount: 0, role: w.role, color: w.color, personalLogs: [] };
+            });
+
+            const filteredLogs = logs.filter(log => {
+                const logDate = new Date(log.timestamp).toLocaleDateString('en-CA');
+                return logDate === filterDate;
+            });
+
+            filteredLogs.forEach(log => {
+                if(summary[log.workerId]) {
+                    summary[log.workerId].totalHours += log.duration;
+                    summary[log.workerId].taskCount += 1;
+                    summary[log.workerId].personalLogs.push(log); // Gắn chi tiết log vào hồ sơ cá nhân
+                    totalFactoryHours += log.duration;
+                }
+            });
+
+            // Tính toán Overview
+            let totalEfficiencyPercent = 0;
+            WORKERS.forEach(w => {
+                const h = summary[w.id].totalHours;
+                if(h > 0) {
+                    activeWorkersCount++;
+                    totalEfficiencyPercent += (h / STANDARD_HOURS_PER_DAY) * 100;
+                }
+            });
+            const avgEfficiency = activeWorkersCount > 0 ? Math.round(totalEfficiencyPercent / activeWorkersCount) : 0;
+
+            // Render Overview
+            document.getElementById('stat-active-workers').innerText = `${activeWorkersCount}/${WORKERS.length}`;
+            document.getElementById('stat-total-hours').innerText = formatHoursMinutes(totalFactoryHours);
+            document.getElementById('stat-avg-efficiency').innerText = `${avgEfficiency}%`;
+
+            // 2. VẼ BẢNG PHÂN TÍCH NĂNG LỰC CÁ NHÂN (GRID)
+            const summaryGrid = document.getElementById('admin-summary-grid');
+            summaryGrid.innerHTML = '';
+            
+            WORKERS.forEach(w => {
+                const data = summary[w.id];
+                const timeStr = formatHoursMinutes(data.totalHours);
+                const efficiency = Math.round((data.totalHours / STANDARD_HOURS_PER_DAY) * 100);
+                const hasWorked = data.totalHours > 0;
+                
+                // Xác định Badge hiệu suất
+                let badge = '';
+                let progressColor = 'bg-slate-200';
+                if (efficiency >= 100) {
+                    badge = '<span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold border border-green-200"><i class="ph-fill ph-star"></i> Xuất sắc</span>';
+                    progressColor = 'bg-green-500';
+                } else if (efficiency >= 80) {
+                    badge = '<span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold border border-blue-200">Đạt chuẩn</span>';
+                    progressColor = 'bg-blue-500';
+                } else if (hasWorked) {
+                    badge = '<span class="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs font-bold border border-orange-200">Thiếu giờ ca</span>';
+                    progressColor = 'bg-orange-400';
+                } else {
+                    badge = '<span class="bg-slate-100 text-slate-500 px-2 py-1 rounded text-xs font-bold border border-slate-200">Nghỉ / Trống</span>';
+                }
+
+                const progressWidth = efficiency > 100 ? 100 : efficiency;
+
+                // XÂY DỰNG DANH SÁCH CHI TIẾT CÔNG VIỆC BÊN TRONG THẺ
+                let taskBreakdownHTML = '';
+                if (data.personalLogs.length > 0) {
+                    taskBreakdownHTML = `
+                        <div class="mt-auto pt-4 border-t border-slate-100 flex-1 flex flex-col">
+                            <p class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
+                                <span><i class="ph-fill ph-list-bullets mr-1"></i> Bóc tách công việc</span>
+                                <span class="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-[10px] border border-blue-100">${data.taskCount} việc</span>
+                            </p>
+                            <div class="space-y-2 overflow-y-auto max-h-40 pr-1 custom-scrollbar">
+                    `;
+                    
+                    data.personalLogs.forEach((plog, index) => {
+                        taskBreakdownHTML += `
+                            <div class="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                <span class="text-sm font-medium text-slate-700 truncate mr-2 flex items-center gap-2" title="${plog.taskName}">
+                                    <span class="text-xs text-slate-400 font-mono">${index + 1}.</span> 
+                                    ${plog.taskName}
+                                </span>
+                                <span class="text-sm font-mono text-blue-600 font-bold whitespace-nowrap bg-white px-2 py-0.5 rounded border border-slate-200 shadow-sm">
+                                    ${formatCompactTime(plog.duration)}
+                                </span>
+                            </div>
+                        `;
+                    });
+                    
+                    taskBreakdownHTML += `</div></div>`;
+                } else {
+                    taskBreakdownHTML = `
+                        <div class="mt-auto pt-4 border-t border-slate-100 flex items-center justify-center h-20 text-slate-400 text-sm font-medium">
+                            Chưa có dữ liệu làm việc
+                        </div>
+                    `;
+                }
+
+                // Gắn thành phần thẻ
+                summaryGrid.innerHTML += `
+                    <div class="bg-white p-5 rounded-2xl border ${hasWorked ? 'border-slate-300 shadow-md' : 'border-slate-200 opacity-60'} transition-all flex flex-col h-full">
+                        <!-- Top Info -->
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${data.color}">
+                                    ${getInitials(data.name)}
+                                </div>
+                                <div>
+                                    <p class="font-bold text-slate-800 text-lg leading-tight">${data.name}</p>
+                                    <p class="text-xs text-slate-500 font-medium">${data.role}</p>
+                                </div>
+                            </div>
+                            <div>${badge}</div>
+                        </div>
+
+                        <!-- Progress Bar & Total Hours -->
+                        <div class="mb-4">
+                            <div class="flex justify-between items-end mb-1">
+                                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Tổng thời gian</span>
+                                <span class="font-mono font-bold ${hasWorked ? 'text-blue-700' : 'text-slate-800'} text-lg">${timeStr}</span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden mb-1">
+                                <div class="${progressColor} h-2 rounded-full transition-all duration-500" style="width: ${progressWidth}%"></div>
+                            </div>
+                            <p class="text-right text-[10px] text-slate-400 font-bold">Đạt ${efficiency}% chuẩn (7.5h)</p>
+                        </div>
+
+                        <!-- Danh sách chi tiết việc làm trong ngày -->
+                        ${taskBreakdownHTML}
+                    </div>
+                `;
+            });
+
+            // 3. VẼ BẢNG NHẬT KÝ THEO TRÌNH TỰ (Chronological Log)
+            const tbody = document.getElementById('admin-table-body');
+            tbody.innerHTML = '';
+            const sortedLogs = [...filteredLogs].reverse(); // Đảo ngược để việc mới nhất lên đầu
+            
+            if(sortedLogs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">Không có dữ liệu làm việc trong ngày này.</td></tr>`;
+                return;
+            }
+
+            sortedLogs.forEach(log => {
+                const w = WORKERS.find(x => x.id === log.workerId);
+                const logEfficiency = Math.round((log.duration / STANDARD_HOURS_PER_DAY) * 100);
+                const logTime = new Date(log.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+                
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="p-4 text-slate-500 font-mono text-sm">${logTime}</td>
+                        <td class="p-4 font-bold text-slate-800 flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs">
+                                ${getInitials(w.name)}
+                            </div>
+                            ${w.name}
+                        </td>
+                        <td class="p-4 text-blue-700 font-semibold uppercase text-sm">${log.taskName}</td>
+                        <td class="p-4 font-mono font-bold text-slate-600">${formatHoursMinutes(log.duration)}</td>
+                        <td class="p-4 text-right">
+                            <span class="inline-block bg-indigo-50 text-indigo-700 font-mono font-bold px-3 py-1 rounded-lg border border-indigo-100">
+                                ${logEfficiency}% ca
+                            </span>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // --- XỬ LÝ SỰ KIỆN KIOSK ---
+        function handleWorkerClick(workerId) {
+            currentWorkerId = workerId;
+            const worker = WORKERS.find(w => w.id === workerId);
+            
+            if (activeSessions[workerId]) {
+                const session = activeSessions[workerId];
+                document.getElementById('mad-avatar').innerText = getInitials(worker.name);
+                document.getElementById('mad-name').innerText = worker.name;
+                document.getElementById('mad-task').innerText = session.taskName;
+                openModal('modal-active-detail');
+            } else {
+                document.getElementById('mit-avatar').className = `w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl ${worker.color}`;
+                document.getElementById('mit-avatar').innerText = getInitials(worker.name);
+                document.getElementById('mit-name').innerText = worker.name;
+                
+                document.getElementById('task-input').value = '';
+                document.getElementById('task-error').classList.add('hidden');
+                
+                openModal('modal-input-task');
+                setTimeout(() => document.getElementById('task-input').focus(), 100);
+            }
+        }
+
+        function handleStartJob(e) {
+            e.preventDefault(); 
+            const taskInput = document.getElementById('task-input');
+            const taskName = taskInput.value.trim();
+            
+            if(!taskName) {
+                document.getElementById('task-error').classList.remove('hidden');
+                document.getElementById('task-error').innerText = 'Vui lòng điền nội dung!';
+                return;
+            }
+
+            activeSessions[currentWorkerId] = {
+                taskName: taskName,
+                startTime: Date.now()
+            };
+
+            closeModals();
+            renderWorkerGrid(); 
+        }
+
+        function handleStopJob() {
+            const session = activeSessions[currentWorkerId];
+            if(!session) return;
+
+            const durationHours = (Date.now() - session.startTime) / 3600000;
+            
+            logs.push({
+                id: Date.now(),
+                workerId: currentWorkerId,
+                taskName: session.taskName,
+                duration: durationHours,
+                timestamp: Date.now()
+            });
+
+            delete activeSessions[currentWorkerId];
+
+            closeModals();
+            renderWorkerGrid(); 
+        }
+
+        // --- ĐIỀU HƯỚNG & MODAL ---
+        function switchView(viewId) {
+            ['view-kiosk', 'view-admin-login', 'view-admin-dashboard'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(viewId).classList.remove('hidden');
+            
+            if(viewId === 'view-admin-dashboard') {
+                renderAdminDashboard();
+            }
+            if(viewId === 'view-admin-login') {
+                document.getElementById('admin-pin').value = '';
+                document.getElementById('pin-error').innerText = '';
+            }
+        }
+
+        function checkLogin() {
+            const pin = document.getElementById('admin-pin').value;
+            if(pin === ADMIN_PIN) {
+                switchView('view-admin-dashboard');
+            } else {
+                const errorEl = document.getElementById('pin-error');
+                errorEl.innerText = 'Sai mã PIN! Vui lòng thử lại.';
+                const box = errorEl.parentElement;
+                box.classList.add('animate-pulse');
+                setTimeout(() => box.classList.remove('animate-pulse'), 500);
+            }
+        }
+
+        function openModal(modalId) {
+            ['modal-input-task', 'modal-active-detail'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModals() {
+            ['modal-input-task', 'modal-active-detail'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            currentWorkerId = null;
+        }
+
+    </script>
+</body>
+</html>
