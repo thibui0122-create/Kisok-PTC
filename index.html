@@ -127,7 +127,6 @@
                     <label class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-2">
                         <i class="ph-fill ph-note-pencil text-lg text-blue-500"></i> Ghi chú phát sinh / Phụ việc khác?
                     </label>
-                    <!-- Chuyển onchange thành oninput để lưu ngay lập tức từng phím gõ -->
                     <textarea id="mad-note" rows="2" placeholder="Ví dụ: Đang làm thì đi phụ anh Đệ bưng khuôn 15 phút..." 
                         oninput="updateSessionNote()"
                         class="w-full bg-white border-2 border-slate-200 rounded-xl p-3 text-slate-700 text-sm md:text-base focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all resize-none font-medium"></textarea>
@@ -284,24 +283,45 @@
         let logs = [];
         let currentWorkerId = null;
 
-        // --- HÀM LƯU TRỮ (PERSISTENCE) ---
-        // Lưu dữ liệu vào LocalStorage của trình duyệt
+        // --- HÀM LƯU TRỮ (PERSISTENCE) TỐI ƯU HÓA ---
+        // Lưu dữ liệu ngay lập tức vào trình duyệt để chống mất dữ liệu khi F5 hoặc tắt máy
         function saveData() {
-            localStorage.setItem('ptc_activeSessions', JSON.stringify(activeSessions));
-            localStorage.setItem('ptc_logs', JSON.stringify(logs));
+            try {
+                localStorage.setItem('ptc_active_v3', JSON.stringify(activeSessions));
+                localStorage.setItem('ptc_logs_v3', JSON.stringify(logs));
+            } catch (e) {
+                console.warn('Trình duyệt chặn LocalStorage. Vui lòng tắt chế độ Ẩn danh!', e);
+            }
         }
 
-        // Tải dữ liệu từ LocalStorage khi mở lại web
+        // Tải lại toàn bộ dữ liệu từ bộ nhớ khi web vừa được mở lên
         function loadData() {
-            const savedSessions = localStorage.getItem('ptc_activeSessions');
-            if (savedSessions) {
-                activeSessions = JSON.parse(savedSessions);
-            }
-            const savedLogs = localStorage.getItem('ptc_logs');
-            if (savedLogs) {
-                logs = JSON.parse(savedLogs);
+            try {
+                const s = localStorage.getItem('ptc_active_v3') || localStorage.getItem('ptc_activeSessions');
+                if (s) activeSessions = JSON.parse(s);
+                
+                const l = localStorage.getItem('ptc_logs_v3') || localStorage.getItem('ptc_logs');
+                if (l) logs = JSON.parse(l);
+            } catch (e) {
+                console.warn('Lỗi đọc dữ liệu: ', e);
             }
         }
+
+        // ÉP trình duyệt phải lưu dữ liệu khi người dùng chuyển Tab, thu nhỏ web hoặc tắt màn hình điện thoại
+        document.addEventListener("visibilitychange", function() {
+            if (document.visibilityState === 'hidden') {
+                saveData();
+            }
+        });
+
+        // ÉP trình duyệt lưu trước khi nhấn Reload/F5
+        window.addEventListener("beforeunload", function() {
+            saveData();
+        });
+
+        // BẢO HIỂM THÊM: Cứ 5 giây là tự động bấm Save một lần
+        setInterval(saveData, 5000);
+
 
         // --- HÀM TIỆN ÍCH ---
         function getInitials(fullName) {
@@ -310,7 +330,7 @@
         }
 
         window.onload = function() {
-            loadData(); // Lấy lại phiên làm việc nếu lỡ tắt trình duyệt
+            loadData(); // Gọi lệnh Load dữ liệu ngay khi vừa tải xong
 
             const today = new Date().toLocaleDateString('en-CA');
             const dateFilter = document.getElementById('admin-date-filter');
@@ -504,7 +524,7 @@
 
                 const progressWidth = efficiency > 100 ? 100 : efficiency;
 
-                // XÂY DỰNG DANH SÁCH CHI TIẾT CÔNG VIỆC BÊN TRONG THẺ (Có hiển thị ghi chú nếu có)
+                // XÂY DỰNG DANH SÁCH CHI TIẾT CÔNG VIỆC BÊN TRONG THẺ
                 let taskBreakdownHTML = '';
                 if (data.personalLogs.length > 0) {
                     taskBreakdownHTML = `
@@ -619,11 +639,10 @@
         }
 
         // --- XỬ LÝ SỰ KIỆN KIOSK ---
-        // Lưu ghi chú ngay khi người dùng gõ (Cập nhật thời gian thực vào Session và LocalStorage)
         function updateSessionNote() {
             if(currentWorkerId && activeSessions[currentWorkerId]) {
                 activeSessions[currentWorkerId].notes = document.getElementById('mad-note').value.trim();
-                saveData(); // Lưu ngay vào bộ nhớ cục bộ
+                saveData(); // LƯU NGAY LẬP TỨC khi thợ gõ từng chữ
             }
         }
 
@@ -636,7 +655,7 @@
                 document.getElementById('mad-avatar').innerText = getInitials(worker.name);
                 document.getElementById('mad-name').innerText = worker.name;
                 document.getElementById('mad-task').innerText = session.taskName;
-                document.getElementById('mad-note').value = session.notes || ''; // Hiển thị lại ghi chú cũ nếu có
+                document.getElementById('mad-note').value = session.notes || ''; 
                 openModal('modal-active-detail');
             } else {
                 document.getElementById('mit-avatar').className = `w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl ${worker.color}`;
@@ -665,10 +684,10 @@
             activeSessions[currentWorkerId] = {
                 taskName: taskName,
                 notes: '', 
-                startTime: Date.now() // Thời điểm bắt đầu chính xác tới từng mili-giây
+                startTime: Date.now()
             };
 
-            saveData(); // Đồng bộ lưu lại mốc thời gian bắt đầu
+            saveData(); // LƯU DỮ LIỆU ĐỒNG HỒ MỚI BẮT ĐẦU
             closeModals();
             renderWorkerGrid(); 
         }
@@ -677,7 +696,6 @@
             const session = activeSessions[currentWorkerId];
             if(!session) return;
 
-            // Đảm bảo lấy được ghi chú mới nhất trước khi tắt
             const latestNote = document.getElementById('mad-note').value.trim();
             const finalNote = latestNote || session.notes || '';
 
@@ -694,7 +712,7 @@
 
             delete activeSessions[currentWorkerId];
 
-            saveData(); // Lưu lại lịch sử và làm trống phiên làm việc
+            saveData(); // LƯU KẾT QUẢ VÀO LOG
             closeModals();
             renderWorkerGrid(); 
         }
